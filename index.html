@@ -1,0 +1,1761 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento Financeiro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background-color: #f0f2f5; /* Um cinza um pouco mais suave para o fundo */
+        }
+        #dados-container, #usuarios-container {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        #dados-container p {
+            margin-bottom: 5px;
+        }
+        .dado-item {
+            display: grid; /* Usando CSS Grid para alinhamento */
+            /* Ajuste na largura das colunas para melhor alinhamento */
+            grid-template-columns: 0.8fr 1fr 1.2fr 0.5fr 1.5fr 1.5fr auto auto; /* Definindo colunas para cada campo + botões */
+            gap: 10px; /* Espaço entre as colunas */
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .usuario-item {
+            display: grid;
+            /* Tipo, Nome/Razão Social, CPF/CNPJ, E-mail, Celular, Categoria, Ações */
+            grid-template-columns: 0.8fr 2fr 1.2fr 2fr 1fr 0.8fr auto;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+         .dado-item .dado-campo, .usuario-item .usuario-campo {
+            overflow: hidden; /* Evita que o texto transborde */
+            text-overflow: ellipsis; /* Adiciona reticências se o texto for muito longo */
+            white-space: nowrap; /* Impede quebra de linha */
+        }
+        .dado-item .botoes-container, .usuario-item .botoes-container {
+            display: flex;
+            gap: 5px; /* Espaço entre os botões */
+        }
+
+        .filtros {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .filtros label {
+            margin-right: 5px;
+        }
+        .nav-tabs {
+            display: flex;
+            padding-left: 0;
+            margin-bottom: 1rem;
+            list-style: none;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .nav-item {
+            margin-right: 1rem;
+        }
+        .nav-link {
+            display: block;
+            padding: 0.5rem 1rem;
+            color: #007bff;
+            text-decoration: none;
+            border-radius: 0.25rem 0.25rem 0 0;
+            border: 1px solid transparent;
+            transition: border-color 0.15s ease-in-out, color 0.15s ease-in-out;
+        }
+        .nav-link:hover, .nav-link:focus {
+            border-color: #e9ecef #e9ecef #dee2e6;
+            color: #0056b3;
+        }
+        .nav-link.active {
+            color: #495057;
+            background-color: #fff;
+            border-color: #dee2e6 #dee2e6 #fff;
+        }
+        .tab-content {
+            padding: 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            background-color: #fff;
+        }
+        #graficos-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .grafico-container {
+            width: calc(100% - 30px);
+            min-width: 300px;
+            height: 300px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            box-sizing: border-box;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background-color: #fff;
+        }
+        .grafico-container canvas {
+            width: 100%;
+            height: 100%;
+        }
+        
+         .metricas-container {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+        .metrica-item {
+            text-align: center;
+            font-weight: bold;
+            color: #1e3a8a;
+        }
+        .metrica-valor {
+            font-size: 1.2em;
+            color: #0056b3;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            gap: 5px;
+        }
+        .pagination button {
+            padding: 5px 10px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            background-color: #fff;
+            cursor: pointer;
+        }
+        .pagination button:hover:not(:disabled) {
+            background-color: #e9ecef;
+        }
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+
+        /* Estilos para a tela de login */
+        #login-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .login-container {
+            background-color: white;
+            padding: 2rem 3rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 450px;
+        }
+        .login-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #1e3a8a;
+            margin-bottom: 1.8rem;
+            text-align: center;
+        }
+        .login-input {
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            padding: 0.9rem 1rem;
+            width: 100%;
+            margin-bottom: 1.2rem;
+            transition: border-color 0.2s;
+        }
+        .login-input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+        .login-button {
+            background-color: #1e3a8a;
+            color: white;
+            font-weight: 600;
+            padding: 0.9rem;
+            border-radius: 0.5rem;
+            width: 100%;
+            transition: background-color 0.2s;
+            border: none;
+        }
+        .login-button:hover {
+            background-color: #1c3170;
+        }
+        .login-error {
+            color: #dc2626;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+        #main-content {
+            display: none; /* Conteúdo principal escondido inicialmente */
+        }
+
+        /* Estilos para o modal de confirmação */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        .modal-buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .modal-buttons button {
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .modal-buttons .confirm-button {
+            background-color: #dc2626;
+            color: white;
+            border: none;
+        }
+        .modal-buttons .cancel-button {
+            background-color: #cbd5e0;
+            color: #4a5568;
+            border: none;
+        }
+    </style>
+</head>
+<body class="p-0">
+
+    <div id="login-screen">
+        <div class="login-container">
+            <h2 class="login-title">Acessar Gerenciador Financeiro</h2>
+            <form id="loginForm">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Usuário:</label>
+                    <input type="text" id="username" name="username" class="login-input" required placeholder="Digite seu usuário">
+                </div>
+                <div class="mt-4">
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Senha:</label>
+                    <input type="password" id="password" name="password" class="login-input" required placeholder="Digite sua senha">
+                </div>
+                <div id="loginErrorMessage" class="login-error hidden"></div>
+                <div class="mt-6">
+                    <button type="submit" class="login-button">Entrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="main-content" class="bg-gray-100 p-6 rounded-lg">
+        <h1 class="text-2xl font-semibold text-center text-blue-600 mb-8">Gerenciamento Financeiro</h1>
+
+        <ul class="nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link active" href="#formulario">Formulário</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#graficos">Gráficos</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#cadastro-clientes">Cadastro de Clientes</a>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <div id="formulario" class="tab-pane fade show active">
+                <div class="bg-white shadow-md rounded-lg p-6">
+                    <form id="financeForm" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="data" class="block text-gray-700 text-sm font-bold mb-2">Data:</label>
+                                <input type="date" id="data" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required tabindex="1">
+                            </div>
+                            <div>
+                                <label for="mes" class="block text-gray-700 text-sm font-bold mb-2">Mês:</label>
+                                <input type="text" id="mes" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" readonly tabindex="-1">
+                            </div>
+                            <div>
+                                <label for="semana" class="block text-gray-700 text-sm font-bold mb-2">Semana:</label>
+                                <input type="text" id="semana" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" readonly tabindex="-1">
+                            </div>
+                            <div>
+                                <label for="ano" class="block text-gray-700 text-sm font-bold mb-2">Ano:</label>
+                                <input type="text" id="ano" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" readonly tabindex="-1">
+                            </div>
+                            <div>
+                                <label for="valor" class="block text-gray-700 text-sm font-bold mb-2">Valor (R$):</label>
+                                <input type="text" id="valor" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required tabindex="2">
+                            </div>
+                            <div>
+                                <label for="credito" class="block text-gray-700 text-sm font-bold mb-2">Forma de pagamento:</label>
+                                <select id="credito" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" tabindex="3">
+                                    <option value=""></option>
+                                    <option value="Dinheiro">Dinheiro</option>
+                                    <option value="Pix">Pix</option>
+                                    <option value="Crédito">Crédito</option>
+                                    <option value="Débito">Débito</option>
+                                    <option value="Transferência">Transferência</option>
+                                    <option value="Boleto">Boleto</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" tabindex="4">Salvar</button>
+                    </form>
+                </div>
+
+                <div class="bg-white shadow-md rounded-lg p-6 mt-6" id="filtros-dados-salvos">
+                    <h2 class="text-lg font-semibold mb-4 text-gray-800">Filtrar Dados Salvos:</h2>
+                    <div class="filtros grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label for="dataInicioFiltro" class="block text-gray-700 text-sm font-bold mb-2">Data Início:</label>
+                            <input type="date" id="dataInicioFiltro" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        </div>
+                        <div>
+                            <label for="dataFimFiltro" class="block text-gray-700 text-sm font-bold mb-2">Data Fim:</label>
+                            <input type="date" id="dataFimFiltro" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        </div>
+                        <div>
+                            <label for="mesFiltro" class="block text-gray-700 text-sm font-bold mb-2">Mês:</label>
+                            <select id="mesFiltro" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                                <option value="">Todos</option>
+                                </select>
+                        </div>
+                        <div>
+                            <label for="semanaFiltro" class="block text-gray-700 text-sm font-bold mb-2">Dia da Semana:</label>
+                            <select id="semanaFiltro" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                                <option value="">Todos</option>
+                                </select>
+                        </div>
+                        <div>
+                            <label for="anoFiltro" class="block text-gray-700 text-sm font-bold mb-2">Ano:</label>
+                            <select id="anoFiltro" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                                <option value="">Todos</option>
+                                </select>
+                        </div>
+                        <div>
+                            <label for="creditoFiltro" class="block text-gray-700 text-sm font-bold mb-2">Forma de Pagamento:</label>
+                            <select id="creditoFiltro" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                                <option value="">Todas</option>
+                                </select>
+                        </div>
+                    </div>
+                     <button id="aplicarFiltroButton" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-4">Aplicar Filtros</button>
+                     <button id="limparFiltrosButton" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-4 ml-2">Limpar Filtros</button>
+                     <button id="exportarExcelButton" class="bg-green-600 hover:bg-green-800 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-4 ml-2">Exportar para Excel</button>
+                </div>
+
+
+                <div id="dados-container" class="mt-8 p-4 bg-gray-100 rounded-md border border-gray-300">
+                     <h2 class="text-lg font-semibold mb-4 text-gray-800">Dados Salvos:</h2>
+                     <div class="dado-item" style="font-weight: bold; border-bottom: 2px solid #ccc;">
+                        <span class="dado-campo">Data</span>
+                        <span class="dado-campo">Mês</span>
+                        <span class="dado-campo">Semana</span>
+                        <span class="dado-campo">Ano</span>
+                        <span class="dado-campo">Valor</span>
+                        <span class="dado-campo">Forma de Pagamento</span>
+                        <span class="dado-campo"></span> <span class="dado-campo"></span> </div>
+                </div>
+                 <div id="pagination-container" class="pagination">
+                    <button id="first-page"><i class="fas fa-angle-double-left"></i> Primeira</button> <button id="prev-page"><i class="fas fa-angle-left"></i> Anterior</button>
+                    <span id="page-info">Página 1 de 1</span>
+                    <button id="next-page">Próxima <i class="fas fa-angle-right"></i></button>
+                    <button id="last-page">Última <i class="fas fa-angle-double-right"></i></button> </div>
+            </div>
+            <div id="graficos" class="tab-pane fade">
+                <div class="bg-white shadow-md rounded-lg p-6">
+                    <div class="filtros" id="graficos-filtros">
+                        <label for="anoGrafico">Selecionar Ano:</label>
+                        <select id="anoGrafico">
+                            <option value="">Todos</option>
+                        </select>
+                         <label for="mesGrafico">Selecionar Mês:</label>
+                        <select id="mesGrafico">
+                            <option value="">Todos</option>
+                            <option value="Janeiro">Janeiro</option>
+                            <option value="Fevereiro">Fevereiro</option>
+                            <option value="Março">Março</option>
+                            <option value="Abril">Abril</option>
+                            <option value="Maio">Maio</option>
+                            <option value="Junho">Junho</option>
+                            <option value="Julho">Julho</option>
+                            <option value="Agosto">Agosto</option>
+                            <option value="Setembro">Setembro</option>
+                            <option value="Outubro">Outubro</option>
+                            <option value="Novembro">Novembro</option>
+                            <option value="Dezembro">Dezembro</option>
+                        </select>
+                         <label for="semanaGrafico">Selecionar Dia da Semana:</label>
+                        <select id="semanaGrafico">
+                            <option value="">Todos</option>
+                            <option value="Domingo">Domingo</option>
+                            <option value="Segunda-feira">Segunda-feira</option>
+                            <option value="Terça-feira">Terça-feira</ terça-feira>
+                            <option value="Quarta-feira">Quarta-feira</option>
+                            <option value="Quinta-feira">Quinta-feira</option>
+                            <option value="Sexta-feira">Sexta-feira</option>
+                            <option value="Sábado">Sábado</option>
+                        </select>
+                         <button id="aplicarFiltroGraficosButton" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Aplicar Filtros</button>
+                         <button id="limparFiltroGraficosButton" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Limpar Filtros</button>
+                    </div>
+                    <div class="metricas-container" id="metricas-container"> <div class="metrica-item">
+                            Total de Valores: <span id="totalValores" class="metrica-valor">R$ 0,00</span>
+                        </div>
+                        <div class="metrica-item">
+                            Quantidade de Lançamentos: <span id="quantidadeLancamentos" class="metrica-valor">0</span>
+                        </div>
+                        <div class="metrica-item">
+                            Média Diária: <span id="mediaDiaria" class="metrica-valor">R$ 0,00</span>
+                        </div>
+                    </div>
+                    <div id="graficos-container" style="display: none;">
+                        <div class="grafico-container">
+                            <canvas id="valorPorMesGrafico"></canvas>
+                        </div>
+                        <div class="grafico-container">
+                            <canvas id="valorPorCreditoGrafico"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="cadastro-clientes" class="tab-pane fade">
+                <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+                    <h2 class="text-lg font-semibold mb-4 text-gray-800">Cadastro de Pessoa Física</h2>
+                    <form id="formPessoaFisica" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="pfNomeCompleto" class="block text-gray-700 text-sm font-bold mb-2">Nome Completo:</label>
+                                <input type="text" id="pfNomeCompleto" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required tabindex="5">
+                            </div>
+                            <div>
+                                <label for="pfCPF" class="block text-gray-700 text-sm font-bold mb-2">CPF:</label>
+                                <input type="text" id="pfCPF" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required tabindex="6">
+                            </div>
+                            <div>
+                                <label for="pfEmail" class="block text-gray-700 text-sm font-bold mb-2">E-mail:</label>
+                                <input type="email" id="pfEmail" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required tabindex="7">
+                            </div>
+                            <div>
+                                <label for="pfCelular" class="block text-gray-700 text-sm font-bold mb-2">Celular:</label>
+                                <input type="text" id="pfCelular" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required tabindex="8">
+                            </div>
+                            <div>
+                                <label for="pfCategoria" class="block text-gray-700 text-sm font-bold mb-2">Categoria:</label>
+                                <select id="pfCategoria" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required tabindex="9">
+                                    <option value="">Selecione</option>
+                                    <option value="Padrão">Padrão</option>
+                                    <option value="Bronze">Bronze</option>
+                                    <option value="Prata">Prata</option>
+                                    <option value="Ouro">Ouro</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" tabindex="10">Cadastrar Pessoa Física</button>
+                    </form>
+                </div>
+
+                <div class="bg-white shadow-md rounded-lg p-6">
+                    <h2 class="text-lg font-semibold mb-4 text-gray-800">Cadastro de Pessoa Jurídica</h2>
+                    <form id="formPessoaJuridica" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="pjRazaoSocial" class="block text-gray-700 text-sm font-bold mb-2">Razão Social:</label>
+                                <input type="text" id="pjRazaoSocial" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required tabindex="11">
+                            </div>
+                            <div>
+                                <label for="pjCNPJ" class="block text-gray-700 text-sm font-bold mb-2">CNPJ:</label>
+                                <input type="text" id="pjCNPJ" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required tabindex="12">
+                            </div>
+                            <div>
+                                <label for="pjNomeContato" class="block text-gray-700 text-sm font-bold mb-2">Nome do Contato:</label>
+                                <input type="text" id="pjNomeContato" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required tabindex="13">
+                            </div>
+                            <div>
+                                <label for="pjCelularContato" class="block text-gray-700 text-sm font-bold mb-2">Celular do Contato:</label>
+                                <input type="text" id="pjCelularContato" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required tabindex="14">
+                            </div>
+                            <div>
+                                <label for="pjEmailContato" class="block text-gray-700 text-sm font-bold mb-2">E-mail do Contato:</label>
+                                <input type="email" id="pjEmailContato" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required tabindex="15">
+                            </div>
+                            <div>
+                                <label for="pjCategoria" class="block text-gray-700 text-sm font-bold mb-2">Categoria:</label>
+                                <select id="pjCategoria" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required tabindex="16">
+                                    <option value="">Selecione</option>
+                                    <option value="Padrão">Padrão</option>
+                                    <option value="Bronze">Bronze</option>
+                                    <option value="Prata">Prata</option>
+                                    <option value="Ouro">Ouro</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" tabindex="17">Cadastrar Pessoa Jurídica</button>
+                    </form>
+                </div>
+
+                <div id="usuarios-container" class="mt-8 p-4 bg-gray-100 rounded-md border border-gray-300">
+                    <h2 class="text-lg font-semibold mb-4 text-gray-800">Clientes Cadastrados:</h2>
+                    <div class="usuario-item" style="font-weight: bold; border-bottom: 2px solid #ccc;">
+                        <span class="usuario-campo">Tipo</span>
+                        <span class="usuario-campo">Nome/Razão Social</span>
+                        <span class="usuario-campo">CPF/CNPJ</span>
+                        <span class="usuario-campo">E-mail</span>
+                        <span class="usuario-campo">Celular</span>
+                        <span class="usuario-campo">Categoria</span>
+                        <span class="usuario-campo">Ações</span>
+                    </div>
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmationModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <p>Tem certeza que deseja excluir este item?</p>
+            <div class="modal-buttons">
+                <button id="confirmDeleteButton" class="confirm-button">Sim</button>
+                <button id="cancelDeleteButton" class="cancel-button">Não</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Função para formatar data (movida para o escopo global)
+        function formatarData(dataString) {
+            const [ano, mes, dia] = dataString.split('-');
+            return `${dia}/${mes}/${ano}`;
+        }
+
+        // Seletores para a tela de login
+        const loginScreen = document.getElementById('login-screen');
+        const mainContent = document.getElementById('main-content');
+        const loginForm = document.getElementById('loginForm');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const loginErrorMessage = document.getElementById('loginErrorMessage');
+
+        // Seletores para o conteúdo principal
+        let dataInput, mesInput, diaInput, semanaInput, anoInput, valorInput, creditoInput, financeFormEl, dadosContainer;
+        let formularioTab, graficosTab, cadastroClientesTab, formularioDiv, graficosDiv, cadastroClientesDiv, graficosContainerEl, graficosFiltrosDiv;
+        let valorPorMesGraficoCtx, valorPorCreditoGraficoCtx, valorPorMesGrafico, valorPorCreditoGrafico;
+        let anoGraficoSelect, mesGraficoSelect, semanaGraficoSelect;
+        let totalValoresSpan, quantidadeLancamentosSpan, mediaDiariaSpan; // Novos seletores para as métricas
+        let metricasContainerEl; // Novo seletor para o contêiner das métricas
+        // Seletores para a paginação (atualizados com botões de primeira e última página)
+        let paginationContainer, firstPageButton, prevPageButton, nextPageButton, lastPageButton, pageInfoSpan;
+
+        // Variáveis de paginação
+        let currentPage = 1;
+        const itemsPerPage = 10;
+
+        // Seletores para os filtros de Dados Salvos
+        let dataInicioFiltro, dataFimFiltro, mesFiltro, semanaFiltro, anoFiltro, creditoFiltro, aplicarFiltroButton, limparFiltrosButton;
+        let filtrosDadosSalvosContainer; // Novo seletor para o contêiner dos filtros de dados salvos
+        let exportarExcelButton; // Novo seletor para o botão de exportar para Excel
+
+        // Seletor para o novo botão de aplicar filtros nos gráficos
+        let aplicarFiltroGraficosButton;
+        // Novo seletor para o botão Limpar Filtros nos gráficos
+        let limparFiltroGraficosButton;
+
+        // Seletores para o novo conteúdo de cadastro de usuários
+        let formPessoaFisica, pfNomeCompleto, pfCPF, pfEmail, pfCelular, pfCategoria;
+        let formPessoaJuridica, pjRazaoSocial, pjCNPJ, pjNomeContato, pjCelularContato, pjEmailContato, pjCategoria;
+        let usuariosContainer;
+
+        // Seletores do modal de confirmação
+        let confirmationModal, confirmDeleteButton, cancelDeleteButton;
+        let currentDeleteIndex = -1; // Variável para armazenar o índice do item a ser excluído
+
+        // Array para armazenar os dados filtrados para exibição paginada
+        let dadosFiltradosPagina = [];
+
+
+        const mesesDoAno = [
+            "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+            "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+        ];
+        const diasSemana = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+        const formasPagamento = ["Dinheiro", "Pix", "Crédito", "Débito", "Transferência", "Boleto"];
+
+        // Dados de exemplo iniciais
+        let dados = [
+            { data: "2023-01-15", mes: "Janeiro", semana: "Domingo", ano: "2023", valor: "150,50", credito: "Crédito" },
+            { data: "2023-02-20", mes: "Fevereiro", semana: "Segunda-feira", ano: "2023", valor: "200,00", credito: "Pix" },
+            { data: "2023-03-10", mes: "Março", semana: "Sexta-feira", ano: "2023", valor: "75,20", credito: "Dinheiro" },
+            { data: "2024-04-05", mes: "Abril", semana: "Sexta-feira", ano: "2024", valor: "300,75", credito: "Boleto" },
+            { data: "2024-05-12", mes: "Maio", semana: "Domingo", ano: "2024", valor: "120,00", credito: "Débito" },
+            { data: "2024-06-18", mes: "Junho", semana: "Terça-feira", ano: "2024", valor: "450,90", credito: "Crédito" },
+            { data: "2023-07-01", mes: "Julho", semana: "Sábado", ano: "2023", valor: "90,00", credito: "Pix" },
+            { data: "2024-08-25", mes: "Agosto", semana: "Domingo", ano: "2024", valor: "210,50", credito: "Dinheiro" },
+            { data: "2023-09-30", mes: "Setembro", semana: "Sábado", ano: "2023", valor: "55,00", credito: "Transferência" },
+            { data: "2024-10-10", mes: "Outubro", semana: "Quinta-feira", ano: "2024", valor: "180,00", credito: "Débito" }
+        ];
+
+        // Dados de exemplo para usuários
+        let usuarios = [
+            { tipo: 'Pessoa Física', nomeCompleto: 'João Silva', cpf: '111.222.333-44', email: 'joao@email.com', celular: '(11) 98765-4321', categoria: 'Padrão' },
+            { tipo: 'Pessoa Jurídica', razaoSocial: 'Empresa Alpha Ltda', cnpj: '00.111.222/0001-33', nomeContato: 'Maria Souza', celularContato: '(21) 99887-6655', emailContato: 'maria@alpha.com', categoria: 'Ouro' },
+            { tipo: 'Pessoa Física', nomeCompleto: 'Ana Paula', cpf: '555.666.777-88', email: 'ana@email.com', celular: '(31) 91234-5678', categoria: 'Prata' }
+        ];
+
+
+        // Função para gerar uma data aleatória entre dois anos
+        function gerarDataAleatoria(anoInicial, anoFinal) {
+            const dataInicio = new Date(anoInicial, 0, 1);
+            const dataFim = new Date(anoFinal, 11, 31);
+            const tempoInicio = dataInicio.getTime();
+            const tempoFim = dataFim.getTime();
+            const tempoAleatorio = tempoInicio + Math.random() * (tempoFim - tempoInicio);
+            const dataAleatoria = new Date(tempoAleatorio);
+
+            const ano = dataAleatoria.getFullYear();
+            const mes = String(dataAleatoria.getMonth() + 1).padStart(2, '0');
+            const dia = String(dataAleatoria.getDate()).padStart(2, '0');
+            const mesNome = mesesDoAno[dataAleatoria.getMonth()];
+            const semanaNome = diasSemana[dataAleatoria.getDay()];
+
+            return {
+                data: `${ano}-${mes}-${dia}`,
+                mes: mesNome,
+                semana: semanaNome,
+                ano: String(ano)
+            };
+        }
+
+        // Função para gerar um valor aleatório formatado como string brasileira
+        function gerarValorAleatorio(min, max) {
+            const valor = (Math.random() * (max - min) + min).toFixed(2);
+            return String(valor).replace('.', ',');
+        }
+
+        // Gerar 90 dados adicionais
+        for (let i = 0; i < 90; i++) {
+            const dataInfo = gerarDataAleatoria(2010, 2025);
+            const valorAleatorio = gerarValorAleatorio(10, 1000); // Valores entre 10 e 1000
+            const formaPagamentoAleatoria = formasPagamento[Math.floor(Math.random() * formasPagamento.length)];
+
+            dados.push({
+                data: dataInfo.data,
+                mes: dataInfo.mes,
+                semana: dataInfo.semana,
+                ano: dataInfo.ano,
+                valor: valorAleatorio,
+                credito: formaPagamentoAleatoria
+            });
+        }
+
+        // --- Lógica de Login ---
+        if (loginForm) {
+            loginForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const username = usernameInput.value;
+                const password = passwordInput.value;
+
+                // Credenciais hardcoded (substitua por uma autenticação real)
+                if (username === 'admin' && password === 'password') {
+                    loginScreen.style.display = 'none';
+                    mainContent.style.display = 'block';
+                    document.body.classList.add('bg-gray-100', 'p-6', 'rounded-lg');
+                    document.body.classList.remove('p-0');
+                    initializeMainContent();
+                } else {
+                    loginErrorMessage.textContent = 'Usuário ou senha inválidos.';
+                    loginErrorMessage.classList.remove('hidden');
+                }
+            });
+        }
+
+        // --- Função para inicializar os scripts do conteúdo principal após o login ---
+        function initializeMainContent() {
+            // Atribuição dos seletores do conteúdo principal
+            dataInput = document.getElementById("data");
+            mesInput = document.getElementById("mes");
+            semanaInput = document.getElementById("semana");
+            anoInput = document.getElementById("ano");
+            valorInput = document.getElementById("valor");
+            creditoInput = document.getElementById("credito");
+            financeFormEl = document.getElementById('financeForm');
+            dadosContainer = document.getElementById('dados-container');
+
+            formularioTab = document.querySelector('a[href="#formulario"]');
+            graficosTab = document.querySelector('a[href="#graficos"]');
+            cadastroClientesTab = document.querySelector('a[href="#cadastro-clientes"]'); // Novo seletor
+            formularioDiv = document.getElementById('formulario');
+            graficosDiv = document.getElementById('graficos');
+            cadastroClientesDiv = document.getElementById('cadastro-clientes'); // Novo seletor
+            graficosContainerEl = document.getElementById('graficos-container');
+            graficosFiltrosDiv = document.getElementById('graficos-filtros');
+            totalValoresSpan = document.getElementById('totalValores'); // Atribuição do novo seletor
+            quantidadeLancamentosSpan = document.getElementById('quantidadeLancamentos'); // Atribuição do novo seletor
+            mediaDiariaSpan = document.getElementById('mediaDiaria'); // Atribuição do novo seletor
+            metricasContainerEl = document.getElementById('metricas-container'); // Atribuição do novo seletor
+
+            // Atribuição dos seletores de paginação
+            paginationContainer = document.getElementById('pagination-container');
+            firstPageButton = document.getElementById('first-page'); // Atribuição do novo seletor
+            prevPageButton = document.getElementById('prev-page');
+            nextPageButton = document.getElementById('next-page');
+            lastPageButton = document.getElementById('last-page'); // Atribuição do novo seletor
+            pageInfoSpan = document.getElementById('page-info');
+
+            // Atribuição dos seletores dos filtros de Dados Salvos
+            dataInicioFiltro = document.getElementById('dataInicioFiltro');
+            dataFimFiltro = document.getElementById('dataFimFiltro');
+            mesFiltro = document.getElementById('mesFiltro');
+            semanaFiltro = document.getElementById('semanaFiltro');
+            anoFiltro = document.getElementById('anoFiltro');
+            creditoFiltro = document.getElementById('creditoFiltro');
+            aplicarFiltroButton = document.getElementById('aplicarFiltroButton');
+            limparFiltrosButton = document.getElementById('limparFiltrosButton'); // Atribuição do novo seletor
+            exportarExcelButton = document.getElementById('exportarExcelButton'); // Atribuição do novo seletor
+            filtrosDadosSalvosContainer = document.getElementById('filtros-dados-salvos'); // Atribuição do novo seletor
+
+            // Atribuição do seletor para o novo botão de aplicar filtros nos gráficos
+            aplicarFiltroGraficosButton = document.getElementById('aplicarFiltroGraficosButton');
+            // Novo seletor para o botão Limpar Filtros nos gráficos
+            limparFiltroGraficosButton = document.getElementById('limparFiltroGraficosButton');
+
+            // Atribuição dos seletores do novo conteúdo de cadastro de usuários
+            formPessoaFisica = document.getElementById('formPessoaFisica');
+            pfNomeCompleto = document.getElementById('pfNomeCompleto');
+            pfCPF = document.getElementById('pfCPF');
+            pfEmail = document.getElementById('pfEmail');
+            pfCelular = document.getElementById('pfCelular');
+            pfCategoria = document.getElementById('pfCategoria');
+
+            formPessoaJuridica = document.getElementById('formPessoaJuridica');
+            pjRazaoSocial = document.getElementById('pjRazaoSocial');
+            pjCNPJ = document.getElementById('pjCNPJ');
+            pjNomeContato = document.getElementById('pjNomeContato');
+            pjCelularContato = document.getElementById('pjCelularContato');
+            pjEmailContato = document.getElementById('pjEmailContato');
+            pjCategoria = document.getElementById('pjCategoria');
+
+            usuariosContainer = document.getElementById('usuarios-container');
+
+            // Atribuição dos seletores do modal de confirmação
+            confirmationModal = document.getElementById('confirmationModal');
+            confirmDeleteButton = document.getElementById('confirmDeleteButton');
+            cancelDeleteButton = document.getElementById('cancelDeleteButton');
+
+
+            valorPorMesGraficoCtx = document.getElementById('valorPorMesGrafico').getContext('2d');
+            valorPorCreditoGraficoCtx = document.getElementById('valorPorCreditoGrafico').getContext('2d');
+            anoGraficoSelect = document.getElementById('anoGrafico');
+            mesGraficoSelect = document.getElementById('mesGrafico');
+            semanaGraficoSelect = document.getElementById('semanaGrafico');
+
+            // Popula os filtros de Dados Salvos inicialmente
+            popularFiltrosDadosSalvos();
+
+
+            // --- Lógica do Gerenciador Financeiro ---
+            if (dataInput) {
+                dataInput.addEventListener("change", function() {
+                    const dataSelecionada = new Date(this.value + 'T00:00:00'); // Força interpretação local
+                    if (mesInput) mesInput.value = mesesDoAno[dataSelecionada.getMonth()];
+                    let diaDaSemana = dataSelecionada.getDay();
+                    if (semanaInput) semanaInput.value = diasSemana[diaDaSemana];
+                    if (anoInput) anoInput.value = dataSelecionada.getFullYear();
+                });
+            }
+
+            if (valorInput) {
+                valorInput.addEventListener('input', function(event) {
+                    let value = event.target.value.replace(/\D/g, "");
+                    if (value === "") {
+                        event.target.value = "";
+                        return;
+                    }
+                    value = (parseFloat(value) / 100).toLocaleString('pt-BR', {
+                        style: 'decimal', minimumFractionDigits: 2, maximumFractionDigits: 2
+                    });
+                    event.target.value = value;
+                });
+            }
+
+            if (financeFormEl) {
+                financeFormEl.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    const data = dataInput ? dataInput.value : '';
+                    const mes = mesInput ? mesInput.value : '';
+                    const semana = semanaInput ? semanaInput.value : '';
+                    const ano = anoInput ? anoInput.value : '';
+                    const valor = valorInput ? valorInput.value : '';
+                    const credito = creditoInput ? creditoInput.value : '';
+
+                    if (!data || !valor || !credito) {
+                        const customAlert = document.createElement('div');
+                        customAlert.textContent = 'Por favor, preencha todos os campos!';
+                        Object.assign(customAlert.style, {
+                            position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+                            backgroundColor: '#f8d7da', color: '#721c24', padding: '10px 20px',
+                            borderRadius: '5px', border: '1px solid #f5c6cb', zIndex: '1000'
+                        });
+                        document.body.appendChild(customAlert);
+                        setTimeout(() => customAlert.remove(), 3000);
+                        return;
+                    }
+                    const novoDado = { data, mes, semana, ano, valor, credito };
+                    dados.unshift(novoDado); // Adiciona o novo dado no início do array
+                    currentPage = 1; // Volta para a primeira página
+                    popularFiltrosDadosSalvos(); // Atualiza os filtros com o novo dado
+                    aplicarFiltrosDadosSalvos(); // Aplica os filtros para exibir o novo dado
+                    financeFormEl.reset();
+                    // Limpa campos de data e valor após salvar, mantendo tabindex funcional
+                    if (dataInput) dataInput.value = '';
+                    if (valorInput) valorInput.value = '';
+                    if (creditoInput) creditoInput.value = ''; // Limpa select
+                    if (mesInput) mesInput.value = '';
+                    if (semanaInput) semanaInput.value = '';
+                    if (anoInput) anoInput.value = '';
+                    if (dataInput) dataInput.focus(); // Foca no primeiro campo após salvar
+                });
+            }
+
+            // --- Lógica de Cadastro de Usuários ---
+            // Função para formatar CPF
+            function formatCPF(cpf) {
+                cpf = cpf.replace(/\D/g, ''); // Remove non-digits
+                if (cpf.length > 11) cpf = cpf.substring(0, 11); // Limit to 11 digits
+                cpf = cpf.replace(/(\d{3})(\d)/, '$1.$2');
+                cpf = cpf.replace(/(\d{3})(\d)/, '$1.$2');
+                cpf = cpf.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                return cpf;
+            }
+
+            // Função para formatar CNPJ
+            function formatCNPJ(cnpj) {
+                cnpj = cnpj.replace(/\D/g, ''); // Remove non-digits
+                if (cnpj.length > 14) cnpj = cnpj.substring(0, 14); // Limit to 14 digits
+                cnpj = cnpj.replace(/^(\d{2})(\d)/, '$1.$2');
+                cnpj = cnpj.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+                cnpj = cnpj.replace(/\.(\d{3})(\d)/, '.$1/$2');
+                cnpj = cnpj.replace(/(\d{4})(\d)/, '$1-$2');
+                return cnpj;
+            }
+
+            // Função para formatar Celular (XX) X XXXX-XXXX
+            function formatCelular(celular) {
+                celular = celular.replace(/\D/g, ''); // Remove non-digits
+                if (celular.length > 11) celular = celular.substring(0, 11); // Limit to 11 digits
+                if (celular.length > 10) {
+                    celular = celular.replace(/^(\d\d)(\d{5})(\d{4}).*/, '($1) $2-$3');
+                } else if (celular.length > 5) {
+                    celular = celular.replace(/^(\d\d)(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+                } else if (celular.length > 2) {
+                    celular = celular.replace(/^(\d\d)(\d{0,5})/, '($1) $2');
+                } else {
+                    celular = celular.replace(/^(\d*)/, '($1');
+                }
+                return celular;
+            }
+
+
+            // Adiciona listeners para formatação de CPF e CNPJ
+            if (pfCPF) {
+                pfCPF.addEventListener('input', function(e) {
+                    e.target.value = formatCPF(e.target.value);
+                });
+            }
+            if (pjCNPJ) {
+                pjCNPJ.addEventListener('input', function(e) {
+                    e.target.value = formatCNPJ(e.target.value);
+                });
+            }
+
+            // Adiciona listeners para formatação de Celular
+            if (pfCelular) {
+                pfCelular.addEventListener('input', function(e) {
+                    e.target.value = formatCelular(e.target.value);
+                });
+            }
+            if (pjCelularContato) {
+                pjCelularContato.addEventListener('input', function(e) {
+                    e.target.value = formatCelular(e.target.value);
+                });
+            }
+
+
+            if (formPessoaFisica) {
+                formPessoaFisica.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    if (!pfNomeCompleto.value || !pfCPF.value || !pfEmail.value || !pfCelular.value || !pfCategoria.value) {
+                        const customAlert = document.createElement('div');
+                        customAlert.textContent = 'Por favor, preencha todos os campos da Pessoa Física!';
+                        Object.assign(customAlert.style, {
+                            position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+                            backgroundColor: '#f8d7da', color: '#721c24', padding: '10px 20px',
+                            borderRadius: '5px', border: '1px solid #f5c6cb', zIndex: '1000'
+                        });
+                        document.body.appendChild(customAlert);
+                        setTimeout(() => customAlert.remove(), 3000);
+                        return;
+                    }
+                    const novoUsuario = {
+                        tipo: 'Pessoa Física',
+                        nomeCompleto: pfNomeCompleto.value,
+                        cpf: pfCPF.value,
+                        email: pfEmail.value,
+                        celular: pfCelular.value,
+                        categoria: pfCategoria.value
+                    };
+                    usuarios.unshift(novoUsuario);
+                    atualizarListaUsuarios();
+                    formPessoaFisica.reset();
+                });
+            }
+
+            if (formPessoaJuridica) {
+                formPessoaJuridica.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    if (!pjRazaoSocial.value || !pjCNPJ.value || !pjNomeContato.value || !pjCelularContato.value || !pjEmailContato.value || !pjCategoria.value) {
+                        const customAlert = document.createElement('div');
+                        customAlert.textContent = 'Por favor, preencha todos os campos da Pessoa Jurídica!';
+                        Object.assign(customAlert.style, {
+                            position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+                            backgroundColor: '#f8d7da', color: '#721c24', padding: '10px 20px',
+                            borderRadius: '5px', border: '1px solid #f5c6cb', zIndex: '1000'
+                        });
+                        document.body.appendChild(customAlert);
+                        setTimeout(() => customAlert.remove(), 3000);
+                        return;
+                    }
+                    const novoUsuario = {
+                        tipo: 'Pessoa Jurídica',
+                        razaoSocial: pjRazaoSocial.value,
+                        cnpj: pjCNPJ.value,
+                        nomeContato: pjNomeContato.value,
+                        celularContato: pjCelularContato.value,
+                        emailContato: pjEmailContato.value,
+                        categoria: pjCategoria.value
+                    };
+                    usuarios.unshift(novoUsuario);
+                    atualizarListaUsuarios();
+                    formPessoaJuridica.reset();
+                });
+            }
+
+            function popularFiltrosDadosSalvos() {
+                const anosUnicos = new Set();
+                const mesesUnicos = new Set();
+                const semanasUnicas = new Set();
+                const creditosUnicos = new Set();
+
+                dados.forEach(dado => {
+                    anosUnicos.add(dado.ano);
+                    mesesUnicos.add(dado.mes);
+                    semanasUnicas.add(dado.semana);
+                    creditosUnicos.add(dado.credito);
+                });
+
+                // Popula os selects de filtro
+                atualizarFiltroSelect(anoFiltro, Array.from(anosUnicos).sort((a, b) => b - a));
+                atualizarFiltroSelect(mesFiltro, mesesDoAno.filter(mes => mesesUnicos.has(mes)));
+                atualizarFiltroSelect(semanaFiltro, diasSemana.filter(dia => semanasUnicas.has(dia)));
+                atualizarFiltroSelect(creditoFiltro, Array.from(creditosUnicos).sort());
+            }
+
+             // Função genérica para atualizar um filtro <select>
+            function atualizarFiltroSelect(selectElement, optionsArray) {
+                const valorSelecionadoAnterior = selectElement.value;
+                selectElement.innerHTML = '<option value="">Todos</option>'; // Adiciona a opção "Todos"
+                optionsArray.forEach(optionValue => {
+                    const option = document.createElement('option');
+                    option.value = optionValue;
+                    option.textContent = optionValue;
+                    selectElement.appendChild(option);
+                });
+                // Tenta manter a opção selecionada anteriormente, se ainda existir
+                if (valorSelecionadoAnterior && optionsArray.includes(valorSelecionadoAnterior)) {
+                    selectElement.value = valorSelecionadoAnterior;
+                }
+            }
+
+            // Nova função para limpar os filtros
+            function limparFiltrosDadosSalvos() {
+                if (dataInicioFiltro) dataInicioFiltro.value = '';
+                if (dataFimFiltro) dataFimFiltro.value = '';
+                if (mesFiltro) mesFiltro.value = '';
+                if (semanaFiltro) semanaFiltro.value = '';
+                if (anoFiltro) anoFiltro.value = '';
+                if (creditoFiltro) creditoFiltro.value = '';
+
+                // Após limpar os filtros, aplica-os para mostrar todos os dados
+                aplicarFiltrosDadosSalvos();
+            }
+
+            // Nova função para limpar os filtros dos gráficos
+            function limparFiltrosGraficos() {
+                if (anoGraficoSelect) anoGraficoSelect.value = '';
+                if (mesGraficoSelect) mesGraficoSelect.value = '';
+                if (semanaGraficoSelect) semanaGraficoSelect.value = '';
+
+                // Após limpar os filtros, atualiza os gráficos para mostrar todos os dados
+                atualizarGraficos();
+            }
+
+
+            function aplicarFiltrosDadosSalvos() {
+                const dataInicio = dataInicioFiltro.value ? new Date(dataInicioFiltro.value + 'T00:00:00') : null;
+                const dataFim = dataFimFiltro.value ? new Date(dataFimFiltro.value + 'T00:00:00') : null;
+                const mesSelecionado = mesFiltro.value;
+                const semanaSelecionada = semanaFiltro.value;
+                const anoSelecionado = anoFiltro.value;
+                const creditoSelecionado = creditoFiltro.value;
+
+                dadosFiltradosPagina = dados.filter(dado => {
+                    const dataDado = new Date(dado.data + 'T00:00:00');
+
+                    // Filtro por período de data
+                    const filtroDataInicio = !dataInicio || dataDado >= dataInicio;
+                    const filtroDataFim = !dataFim || dataDado <= dataFim;
+
+                    // Filtro por mês
+                    const filtroMes = mesSelecionado === '' || dado.mes === mesSelecionado;
+
+                    // Filtro por dia da semana
+                    const filtroSemana = semanaSelecionada === '' || dado.semana === semanaSelecionada;
+
+                    // Filtro por ano
+                    const filtroAno = anoSelecionado === '' || dado.ano === anoSelecionado;
+
+                    // Filtro por forma de pagamento
+                    const filtroCredito = creditoSelecionado === '' || dado.credito === creditoSelecionado;
+
+                    return filtroDataInicio && filtroDataFim && filtroMes && filtroSemana && filtroAno && filtroCredito;
+                });
+
+                currentPage = 1; // Volta para a primeira página após aplicar filtros
+                atualizarDadosSalvos(); // Atualiza a exibição com os dados filtrados
+            }
+
+
+            function atualizarDadosSalvos() {
+                if (!dadosContainer) return;
+
+                // Calcula o índice inicial e final para a página atual nos DADOS FILTRADOS
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const endIndex = startIndex + itemsPerPage;
+                const dadosParaExibir = dadosFiltradosPagina.slice(startIndex, endIndex); // Usa dadosFiltradosPagina aqui
+
+                // Mantém o cabeçalho e limpa apenas os itens de dados
+                const header = dadosContainer.querySelector('.dado-item[style*="font-weight: bold"]');
+                dadosContainer.innerHTML = ''; // Limpa todo o conteúdo
+                dadosContainer.appendChild(document.createElement('h2')).outerHTML = '<h2 class="text-lg font-semibold mb-4 text-gray-800">Dados Salvos:</h2>'; // Recria o título
+                 if (header) {
+                    dadosContainer.appendChild(header); // Adiciona o cabeçalho de volta
+                } else {
+                     // Se o cabeçalho não existir (primeira carga), cria ele
+                     const headerDiv = document.createElement('div');
+                     headerDiv.className = 'dado-item';
+                     headerDiv.style.fontWeight = 'bold';
+                     headerDiv.style.borderBottom = '2px solid #ccc';
+                     headerDiv.innerHTML = `
+                        <span class="dado-campo">Data</span>
+                        <span class="dado-campo">Mês</span>
+                        <span class="dado-campo">Semana</span>
+                        <span class="dado-campo">Ano</span>
+                        <span class="dado-campo">Valor</span>
+                        <span class="dado-campo">Forma de Pagamento</span>
+                        <span class="dado-campo"></span> <span class="dado-campo"></span> `;
+                     dadosContainer.appendChild(headerDiv);
+                }
+
+
+                dadosParaExibir.forEach((dado, index) => {
+                    const novoDadoDiv = document.createElement('div');
+                    novoDadoDiv.className = 'dado-item';
+                    // Para editar/excluir, precisamos encontrar o índice original no array 'dados'
+                    const indiceOriginal = dados.findIndex(item =>
+                        item.data === dado.data &&
+                        item.mes === dado.mes &&
+                        item.semana === dado.semana &&
+                        item.ano === dado.ano &&
+                        item.valor === dado.valor &&
+                        item.credito === dado.credito
+                    );
+
+                    // Usando spans separados para cada campo para melhor controle com Grid
+                    novoDadoDiv.innerHTML = `
+                        <span class="dado-campo">${formatarData(dado.data)}</span>
+                        <span class="dado-campo">${dado.mes}</span>
+                        <span class="dado-campo">${dado.semana}</span>
+                        <span class="dado-campo">${dado.ano}</span>
+                        <span class="dado-campo">${formatCurrency(dado.valor)}</span> <span class="dado-campo">${dado.credito}</span>
+                        <div class="botoes-container">
+                            <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-xs" onclick="editarDado(${indiceOriginal})"><i class="fas fa-edit"></i> Editar</button>
+                            <button class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-xs" onclick="showConfirmationModal(${indiceOriginal})"><i class="fas fa-trash-alt"></i> Excluir</button>
+                        </div>
+                    `;
+                    dadosContainer.appendChild(novoDadoDiv);
+                });
+
+                // Atualiza os controles de paginação com base nos DADOS FILTRADOS
+                atualizarControlesPaginacao(dadosFiltradosPagina.length);
+            }
+
+            function atualizarControlesPaginacao(totalItensFiltrados) {
+                const totalPaginas = Math.ceil(totalItensFiltrados / itemsPerPage);
+                const paginaAtual = currentPage; // Usa currentPage
+
+                if (pageInfoSpan) pageInfoSpan.textContent = `Página ${paginaAtual} de ${totalPaginas || 1}`; // Exibe 1 se totalPaginas for 0
+
+                // Habilita/desabilita botões de navegação
+                if (firstPageButton) firstPageButton.disabled = paginaAtual === 1 || totalPaginas === 0;
+                if (prevPageButton) prevPageButton.disabled = paginaAtual === 1 || totalPaginas === 0;
+                if (nextPageButton) nextPageButton.disabled = paginaAtual === totalPaginas || totalPaginas === 0;
+                if (lastPageButton) lastPageButton.disabled = paginaAtual === totalPaginas || totalPaginas === 0;
+
+
+                // Exibe ou oculta o contêiner de paginação
+                if (paginationContainer) {
+                    if (totalPaginas > 1) {
+                        paginationContainer.style.display = 'flex';
+                    } else {
+                        paginationContainer.style.display = 'none';
+                    }
+                }
+            }
+
+            // Funções de editar e excluir movidas para o escopo global para serem acessíveis pelos onclick
+            window.editarDado = function(index) {
+                 const dado = dados[index];
+                // Preenche o formulário com os dados para edição
+                if (dataInput) dataInput.value = dado.data; // Mantém o formato AAAA-MM-DD para o input type="date"
+                if (mesInput) mesInput.value = dado.mes;
+                if (semanaInput) semanaInput.value = dado.semana;
+                if (anoInput) anoInput.value = dado.ano;
+                if (valorInput) valorInput.value = dado.valor;
+                if (creditoInput) creditoInput.value = dado.credito;
+
+                // Remove o item da lista de dados
+                dados.splice(index, 1);
+                // Ajusta a página atual se o último item da página for removido
+                 if (currentPage > Math.ceil(dadosFiltradosPagina.length / itemsPerPage) && currentPage > 1) {
+                    currentPage--;
+                }
+                popularFiltrosDadosSalvos(); // Atualiza os filtros após a edição/exclusão
+                aplicarFiltrosDadosSalvos(); // Re-aplica os filtros para atualizar a lista
+                // Se a aba de gráficos estiver ativa, atualiza os gráficos
+                if (graficosDiv && graficosDiv.classList.contains('active')) atualizarGraficos();
+
+                // Foca no primeiro campo do formulário para edição
+                if (dataInput) dataInput.focus();
+            }
+
+            // Função para mostrar o modal de confirmação
+            window.showConfirmationModal = function(index) {
+                currentDeleteIndex = index;
+                if (confirmationModal) {
+                    confirmationModal.classList.remove('hidden');
+                }
+            }
+
+            // Função para esconder o modal de confirmação
+            function hideConfirmationModal() {
+                if (confirmationModal) {
+                    confirmationModal.classList.add('hidden');
+                }
+                currentDeleteIndex = -1; // Reseta o índice
+            }
+
+            // Lógica para o botão "Sim" do modal
+            if (confirmDeleteButton) {
+                confirmDeleteButton.addEventListener('click', function() {
+                    if (currentDeleteIndex !== -1) {
+                        dados.splice(currentDeleteIndex, 1);
+                        // Ajusta a página atual se o último item da página for removido
+                        if (currentPage > Math.ceil(dadosFiltradosPagina.length / itemsPerPage) && currentPage > 1) {
+                            currentPage--;
+                        }
+                        popularFiltrosDadosSalvos(); // Atualiza os filtros após a exclusão
+                        aplicarFiltrosDadosSalvos(); // Re-aplica os filtros para atualizar a lista
+                        // Se a aba de gráficos estiver ativa, atualiza os gráficos
+                        if (graficosDiv && graficosDiv.classList.contains('active')) atualizarGraficos();
+                    }
+                    hideConfirmationModal();
+                });
+            }
+
+            // Lógica para o botão "Não" do modal
+            if (cancelDeleteButton) {
+                cancelDeleteButton.addEventListener('click', function() {
+                    hideConfirmationModal();
+                });
+            }
+
+
+            // Função para atualizar a lista de usuários
+            function atualizarListaUsuarios() {
+                if (!usuariosContainer) return;
+
+                // Mantém o cabeçalho e limpa apenas os itens de dados
+                const header = usuariosContainer.querySelector('.usuario-item[style*="font-weight: bold"]');
+                usuariosContainer.innerHTML = ''; // Limpa todo o conteúdo
+                usuariosContainer.appendChild(document.createElement('h2')).outerHTML = '<h2 class="text-lg font-semibold mb-4 text-gray-800">Clientes Cadastrados:</h2>'; // Recria o título
+                if (header) {
+                    usuariosContainer.appendChild(header); // Adiciona o cabeçalho de volta
+                } else {
+                    // Se o cabeçalho não existir (primeira carga), cria ele
+                    const headerDiv = document.createElement('div');
+                    headerDiv.className = 'usuario-item';
+                    headerDiv.style.fontWeight = 'bold';
+                    headerDiv.style.borderBottom = '2px solid #ccc';
+                    headerDiv.innerHTML = `
+                        <span class="usuario-campo">Tipo</span>
+                        <span class="usuario-campo">Nome/Razão Social</span>
+                        <span class="usuario-campo">CPF/CNPJ</span>
+                        <span class="usuario-campo">E-mail</span>
+                        <span class="usuario-campo">Celular</span>
+                        <span class="usuario-campo">Categoria</span>
+                        <span class="usuario-campo">Ações</span>
+                    `;
+                    usuariosContainer.appendChild(headerDiv);
+                }
+
+                usuarios.forEach((usuario, index) => {
+                    const usuarioDiv = document.createElement('div');
+                    usuarioDiv.className = 'usuario-item';
+
+                    let nomePrincipal = '';
+                    let documentoPrincipal = '';
+                    let emailPrincipal = '';
+                    let celularPrincipal = '';
+
+                    if (usuario.tipo === 'Pessoa Física') {
+                        nomePrincipal = usuario.nomeCompleto;
+                        documentoPrincipal = usuario.cpf;
+                        emailPrincipal = usuario.email;
+                        celularPrincipal = usuario.celular;
+                    } else {
+                        nomePrincipal = usuario.razaoSocial;
+                        documentoPrincipal = usuario.cnpj;
+                        emailPrincipal = usuario.emailContato;
+                        celularPrincipal = usuario.celularContato;
+                    }
+
+                    usuarioDiv.innerHTML = `
+                        <span class="usuario-campo">${usuario.tipo}</span>
+                        <span class="usuario-campo">${nomePrincipal}</span>
+                        <span class="usuario-campo">${documentoPrincipal}</span>
+                        <span class="usuario-campo">${emailPrincipal}</span>
+                        <span class="usuario-campo">${celularPrincipal}</span>
+                        <span class="usuario-campo">${usuario.categoria}</span>
+                        <div class="botoes-container">
+                            <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-xs" onclick="editarUsuario(${index})"><i class="fas fa-edit"></i> Editar</button>
+                            <button class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-xs" onclick="excluirUsuario(${index})"><i class="fas fa-trash-alt"></i> Excluir</button>
+                        </div>
+                    `;
+                    usuariosContainer.appendChild(usuarioDiv);
+                });
+            }
+
+            // Função para excluir usuário
+            window.excluirUsuario = function(index) {
+                usuarios.splice(index, 1);
+                atualizarListaUsuarios();
+            }
+
+            // Função para editar usuário
+            window.editarUsuario = function(index) {
+                const usuario = usuarios[index];
+
+                // Ativa a aba "Cadastro de Clientes"
+                cadastroClientesTab.classList.add('active');
+                formularioTab.classList.remove('active');
+                graficosTab.classList.remove('active');
+                cadastroClientesDiv.classList.add('show', 'active');
+                formularioDiv.classList.remove('show', 'active');
+                graficosDiv.classList.remove('show', 'active');
+
+                // Garante que todos os elementos de conteúdo principal estejam ocultos, exceto a aba de cadastro de usuário
+                financeFormEl.style.display = 'none';
+                dadosContainer.style.display = 'none';
+                filtrosDadosSalvosContainer.style.display = 'none';
+                paginationContainer.style.display = 'none';
+                graficosFiltrosDiv.style.display = 'none';
+                graficosContainerEl.style.display = 'none';
+                metricasContainerEl.style.display = 'none';
+                cadastroClientesDiv.style.display = 'block';
+
+                // Limpa ambos os formulários antes de preencher o correto
+                formPessoaFisica.reset();
+                formPessoaJuridica.reset();
+
+                if (usuario.tipo === 'Pessoa Física') {
+                    // Preenche o formulário de Pessoa Física
+                    pfNomeCompleto.value = usuario.nomeCompleto;
+                    pfCPF.value = usuario.cpf;
+                    pfEmail.value = usuario.email;
+                    pfCelular.value = usuario.celular;
+                    pfCategoria.value = usuario.categoria;
+                    pfNomeCompleto.focus(); // Foca no primeiro campo
+                } else { // Pessoa Jurídica
+                    // Preenche o formulário de Pessoa Jurídica
+                    pjRazaoSocial.value = usuario.razaoSocial;
+                    pjCNPJ.value = usuario.cnpj;
+                    pjNomeContato.value = usuario.nomeContato;
+                    pjCelularContato.value = usuario.celularContato;
+                    pjEmailContato.value = usuario.emailContato;
+                    pjCategoria.value = usuario.categoria;
+                    pjRazaoSocial.focus(); // Foca no primeiro campo
+                }
+
+                // Remove o item do array (ele será adicionado novamente ao enviar o formulário)
+                usuarios.splice(index, 1);
+                atualizarListaUsuarios(); // Atualiza a lista exibida
+            };
+
+
+            function formatCurrency(value) {
+                let numericValue;
+                if (typeof value === 'string') {
+                    // Remove R$, spaces, dots (thousands separator), and replace comma (decimal separator) with dot
+                    numericValue = parseFloat(value.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
+                } else if (typeof value === 'number') {
+                    numericValue = value;
+                } else {
+                    return value; // Return original value if not string or number
+                }
+
+                if (isNaN(numericValue)) {
+                    return String(value); // Return original string if parsing failed
+                }
+
+                return numericValue.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
+
+
+            function atualizarGraficos() {
+                if (!valorPorMesGraficoCtx || !valorPorCreditoGraficoCtx) return;
+
+                // Coleta anos, meses e dias da semana únicos dos dados
+                const anosUnicos = new Set();
+                const mesesUnicos = new Set();
+                const semanasUnicas = new Set();
+
+                dados.forEach(dado => {
+                    anosUnicos.add(dado.ano);
+                    mesesUnicos.add(dado.mes);
+                    semanasUnicas.add(dado.semana);
+                });
+
+                // Atualiza os filtros com os valores únicos
+                atualizarFiltroSelect(anoGraficoSelect, Array.from(anosUnicos).sort((a, b) => b - a));
+                atualizarFiltroSelect(mesGraficoSelect, mesesDoAno.filter(mes => mesesUnicos.has(mes))); // Mantém a ordem dos meses
+                atualizarFiltroSelect(semanaGraficoSelect, diasSemana.filter(dia => semanasUnicas.has(dia))); // Mantém a ordem dos dias
+
+                // Aplica os filtros selecionados
+                const anoSelecionado = anoGraficoSelect.value;
+                const mesSelecionado = mesGraficoSelect.value;
+                const semanaSelecionada = semanaGraficoSelect.value;
+
+                const dadosFiltrados = dados.filter(dado => {
+                    const filtroAno = anoSelecionado === '' || dado.ano === anoSelecionado;
+                    const filtroMes = mesSelecionado === '' || dado.mes === mesSelecionado;
+                    const filtroSemana = semanaSelecionada === '' || dado.semana === semanaSelecionada;
+                    return filtroAno && filtroMes && filtroSemana;
+                });
+
+                const valPorMesF = {};
+                const valPorCreditoF = {};
+                let totalValores = 0;
+                const datasUnicas = new Set();
+
+
+                dadosFiltrados.forEach(dado => {
+                    // Certifica-se de que o valor é um número antes de somar
+                    const valorNumerico = parseFloat(dado.valor.replace(/\./g, '').replace(',', '.'));
+                    if (!isNaN(valorNumerico)) {
+                        // Agrupamento para gráfico por mês (considerando o ano selecionado)
+                        if (anoSelecionado === '' || dado.ano === anoSelecionado) {
+                            valPorMesF[dado.mes] = (valPorMesF[dado.mes] || 0) + valorNumerico;
+                        }
+
+                        // Agrupamento para gráfico por forma de pagamento
+                        valPorCreditoF[dado.credito] = (valPorCreditoF[dado.credito] || 0) + valorNumerico;
+
+                        // Cálculo do total de valores
+                        totalValores += valorNumerico;
+
+                        // Coleta datas únicas para a média diária
+                        datasUnicas.add(dado.data);
+                    }
+                });
+
+                // Atualiza as métricas
+                if (totalValoresSpan) totalValoresSpan.textContent = formatCurrency(totalValores);
+                if (quantidadeLancamentosSpan) quantidadeLancamentosSpan.textContent = dadosFiltrados.length;
+
+                const numeroDeDias = datasUnicas.size;
+                const mediaDiaria = numeroDeDias > 0 ? totalValores / numeroDeDias : 0;
+                if (mediaDiariaSpan) mediaDiariaSpan.textContent = formatCurrency(mediaDiaria);
+
+
+                 // Ordena os meses para o gráfico por mês
+                const mesesOrdenados = mesesDoAno.filter(mes => Object.keys(valPorMesF).includes(mes));
+                const valoresMesOrdenados = mesesOrdenados.map(mes => valPorMesF[mes]);
+
+
+                const chartOptions = (titleText, chartType) => ({ // Adicionado chartType como parâmetro
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: true, text: titleText, font: { size: 16 } },
+                        legend: { position: 'bottom' },
+                        tooltip: { // Configuração do tooltip
+                            callbacks: {
+                                label: function(tooltipItem) {
+                                    let label = tooltipItem.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += formatCurrency(tooltipItem.raw);
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value, index, values) {
+                                    return formatCurrency(value);
+                                },
+                                display: chartType !== 'pie' // Oculta o eixo Y para gráficos de pizza
+                            }
+                        },
+                         x: { // Adicionado configuração para o eixo X para ocultar no gráfico de pizza
+                            ticks: {
+                                display: chartType !== 'pie' // Oculta o eixo X para gráficos de pizza
+                            }
+                        }
+                    }
+                });
+
+                // Atualiza o gráfico de Valor por Mês
+                if (valorPorMesGrafico) valorPorMesGrafico.destroy();
+                valorPorMesGrafico = new Chart(valorPorMesGraficoCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: mesesOrdenados,
+                        datasets: [{
+                            label: 'Valor por Mês',
+                            data: valoresMesOrdenados,
+                            backgroundColor: 'rgba(75, 192, 192, 0.7)'
+                        }]
+                    },
+                    options: chartOptions('Valor Total por Mês' + (anoSelecionado ? ` em ${anoSelecionado}` : ''), 'bar') // Passa 'bar' como tipo de gráfico
+                });
+
+                // Atualiza o gráfico de Distribuição por Forma de Pagamento
+                if (valorPorCreditoGrafico) valorPorCreditoGrafico.destroy();
+                valorPorCreditoGrafico = new Chart(valorPorCreditoGraficoCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: Object.keys(valPorCreditoF),
+                        datasets: [{
+                            label: 'Valor por Forma de Pagamento',
+                            data: Object.values(valPorCreditoF),
+                            backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
+                        }]
+                    },
+                    options: chartOptions('Distribuição por Forma de Pagamento' + (anoSelecionado ? ` em ${anoSelecionado}` : '') + (mesSelecionado ? ` em ${mesSelecionado}` : '') + (semanaSelecionada ? ` na ${semanaSelecionada}` : ''), 'pie') // Passa 'pie' como tipo de gráfico
+                });
+            }
+
+            // Ouvintes de evento para os botões de paginação
+            if (firstPageButton) {
+                firstPageButton.addEventListener('click', function() {
+                    if (currentPage !== 1) { // Só navega se não estiver já na primeira página
+                        currentPage = 1;
+                        atualizarDadosSalvos();
+                    }
+                });
+            }
+
+            if (prevPageButton) {
+                prevPageButton.addEventListener('click', function() {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        atualizarDadosSalvos();
+                    }
+                });
+            }
+
+            if (nextPageButton) {
+                nextPageButton.addEventListener('click', function() {
+                    const totalPaginas = Math.ceil(dadosFiltradosPagina.length / itemsPerPage);
+                    if (currentPage < totalPaginas) {
+                        currentPage++;
+                        atualizarDadosSalvos();
+                    }
+                });
+            }
+
+            if (lastPageButton) {
+                lastPageButton.addEventListener('click', function() {
+                    const totalPaginas = Math.ceil(dadosFiltradosPagina.length / itemsPerPage);
+                     if (currentPage !== totalPaginas && totalPaginas > 0) { // Só navega se não estiver já na última página e houver páginas
+                        currentPage = totalPaginas;
+                        atualizarDadosSalvos();
+                    }
+                });
+            }
+
+
+            // Ouvinte de evento para o botão Aplicar Filtros (Dados Salvos)
+            if (aplicarFiltroButton) {
+                aplicarFiltroButton.addEventListener('click', aplicarFiltrosDadosSalvos);
+            }
+
+            // Ouvinte de evento para o botão Limpar Filtros (Dados Salvos)
+            if (limparFiltrosButton) {
+                limparFiltrosButton.addEventListener('click', limparFiltrosDadosSalvos);
+            }
+
+            // Ouvinte de evento para o botão Exportar para Excel
+            if (exportarExcelButton) {
+                exportarExcelButton.addEventListener('click', exportarDadosParaExcel);
+            }
+
+            // Ouvinte de evento para o botão Aplicar Filtros (Gráficos)
+             if (aplicarFiltroGraficosButton) {
+                aplicarFiltroGraficosButton.addEventListener('click', atualizarGraficos);
+            }
+
+            // Ouvinte de evento para o botão Limpar Filtros (Gráficos)
+             if (limparFiltroGraficosButton) {
+                limparFiltroGraficosButton.addEventListener('click', limparFiltrosGraficos);
+            }
+
+
+            // Verifica se todos os elementos necessários existem antes de adicionar ouvintes de evento
+            if (formularioTab && graficosTab && cadastroClientesTab && formularioDiv && graficosDiv && cadastroClientesDiv && graficosContainerEl && graficosFiltrosDiv && financeFormEl && dadosContainer && metricasContainerEl && paginationContainer && filtrosDadosSalvosContainer && confirmationModal && confirmDeleteButton && cancelDeleteButton) { // Incluído filtrosDadosSalvosContainer na verificação
+                // Estado inicial baseado na aba ativa
+                if (formularioDiv.classList.contains('active')) {
+                    financeFormEl.style.display = 'block'; // Mostra o formulário
+                    dadosContainer.style.display = 'block'; // Mostra os dados salvos
+                    filtrosDadosSalvosContainer.style.display = 'block'; // Mostra os filtros de dados
+                    paginationContainer.style.display = 'flex'; // Mostra a paginação
+                    graficosFiltrosDiv.style.display = 'none'; // Esconde os filtros de gráficos
+                    graficosContainerEl.style.display = 'none'; // Esconde o contêiner de gráficos
+                    metricasContainerEl.style.display = 'none'; // Esconde o contêiner de métricas
+                    cadastroClientesDiv.style.display = 'none'; // Esconde o novo conteúdo de cadastro
+                } else if (graficosDiv.classList.contains('active')) {
+                     financeFormEl.style.display = 'none'; // Esconde o formulário
+                    dadosContainer.style.display = 'none'; // Esconde os dados salvos
+                    filtrosDadosSalvosContainer.style.display = 'none'; // Esconde os filtros de dados
+                    paginationContainer.style.display = 'none'; // Esconde a paginação
+                    graficosFiltrosDiv.style.display = 'flex'; // Mostra os filtros de gráficos
+                    graficosContainerEl.style.display = 'flex'; // Mostra o contêiner de gráficos
+                    metricasContainerEl.style.display = 'flex'; // Mostra o contêiner de métricas
+                    cadastroClientesDiv.style.display = 'none'; // Esconde o novo conteúdo de cadastro
+                } else if (cadastroClientesDiv.classList.contains('active')) { // Nova aba ativa
+                    financeFormEl.style.display = 'none'; // Esconde o formulário
+                    dadosContainer.style.display = 'none'; // Esconde os dados salvos
+                    filtrosDadosSalvosContainer.style.display = 'none'; // Esconde os filtros de dados
+                    paginationContainer.style.display = 'none'; // Esconde a paginação
+                    graficosFiltrosDiv.style.display = 'none'; // Esconde os filtros de gráficos
+                    graficosContainerEl.style.display = 'none'; // Esconde o contêiner de gráficos
+                    metricasContainerEl.style.display = 'none'; // Esconde o contêiner de métricas
+                    cadastroClientesDiv.style.display = 'block'; // Mostra o novo conteúdo de cadastro
+                    // Garante que ambos os formulários estejam visíveis quando a aba é selecionada
+                    if (formPessoaFisica) formPessoaFisica.style.display = 'block';
+                    if (formPessoaJuridica) formPessoaJuridica.style.display = 'block';
+                }
+
+                formularioTab.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    // Atualiza as classes da aba ativa
+                    formularioTab.classList.add('active');
+                    graficosTab.classList.remove('active');
+                    cadastroClientesTab.classList.remove('active'); // Desativa a nova aba
+                    formularioDiv.classList.add('show', 'active');
+                    graficosDiv.classList.remove('show', 'active');
+                    cadastroClientesDiv.classList.remove('show', 'active'); // Esconde o novo conteúdo de cadastro
+
+                    // Mostra/esconde elementos para a aba Formulário
+                    financeFormEl.style.display = 'block'; // Mostra o formulário
+                    dadosContainer.style.display = 'block'; // Mostra os dados salvos
+                    filtrosDadosSalvosContainer.style.display = 'block'; // Mostra os filtros de dados
+                    paginationContainer.style.display = 'flex'; // Mostra a paginação
+                    graficosContainerEl.style.display = 'none'; // Esconde o contêiner de gráficos
+                    graficosFiltrosDiv.style.display = 'none'; // Esconde os filtros de gráficos
+                    metricasContainerEl.style.display = 'none'; // Esconde o contêiner de métricas
+                    cadastroClientesDiv.style.display = 'none'; // Garante que esteja escondido
+
+                     // Redefine a página atual para 1 ao voltar para o formulário
+                    currentPage = 1;
+                    aplicarFiltrosDadosSalvos(); // Aplica os filtros ao voltar para a aba Formulário
+                });
+
+                graficosTab.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    // Atualiza as classes da aba ativa
+                    graficosTab.classList.add('active');
+                    formularioTab.classList.remove('active');
+                    cadastroClientesTab.classList.remove('active'); // Desativa a nova aba
+                    graficosDiv.classList.add('show', 'active');
+                    formularioDiv.classList.remove('show', 'active');
+                    cadastroClientesDiv.classList.remove('show', 'active'); // Esconde o novo conteúdo de cadastro
+
+                    // Mostra/esconde elementos para a aba Gráficos
+                    financeFormEl.style.display = 'none'; // Esconde o formulário
+                    dadosContainer.style.display = 'none'; // Esconde os dados salvos
+                    filtrosDadosSalvosContainer.style.display = 'none'; // Esconde os filtros de dados
+                    paginationContainer.style.display = 'none'; // Esconde a paginação
+                    graficosFiltrosDiv.style.display = 'flex'; // Mostra os filtros de gráficos
+                    graficosContainerEl.style.display = 'flex'; // Mostra o contêiner de gráficos
+                    metricasContainerEl.style.display = 'flex'; // Mostra o contêiner de métricas
+                    cadastroClientesDiv.style.display = 'none'; // Garante que esteja escondido
+
+                    atualizarGraficos();
+                });
+
+                // Ouvinte de evento para a nova aba de cadastro de usuários
+                cadastroClientesTab.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    cadastroClientesTab.classList.add('active');
+                    formularioTab.classList.remove('active');
+                    graficosTab.classList.remove('active');
+                    cadastroClientesDiv.classList.add('show', 'active');
+                    formularioDiv.classList.remove('show', 'active');
+                    graficosDiv.classList.remove('show', 'active');
+
+                    // Mostra/esconde elementos para a aba Cadastro de Clientes
+                    financeFormEl.style.display = 'none';
+                    dadosContainer.style.display = 'none';
+                    filtrosDadosSalvosContainer.style.display = 'none';
+                    paginationContainer.style.display = 'none';
+                    graficosFiltrosDiv.style.display = 'none';
+                    graficosContainerEl.style.display = 'none';
+                    metricasContainerEl.style.display = 'none';
+                    cadastroClientesDiv.style.display = 'block'; // Mostra o novo conteúdo de cadastro
+                    // Garante que ambos os formulários estejam visíveis quando a aba é selecionada
+                    if (formPessoaFisica) formPessoaFisica.style.display = 'block';
+                    if (formPessoaJuridica) formPessoaJuridica.style.display = 'block';
+
+                    atualizarListaUsuarios(); // Atualiza a lista de usuários quando a aba é clicada
+                });
+            }
+            // Inicializa a exibição dos dados salvos com os filtros aplicados (inicialmente sem filtros)
+             aplicarFiltrosDadosSalvos();
+            if(dataInput) dataInput.focus(); // Foca no campo data ao carregar o formulário
+            atualizarListaUsuarios(); // Atualiza a lista de usuários na carga inicial
+        }
+
+        // Função para exportar dados para CSV (Excel)
+        function exportarDadosParaExcel() {
+            // Usa dadosFiltradosPagina se houver filtros aplicados, caso contrário, usa todos os dados
+            const dataToExport = dadosFiltradosPagina.length > 0 ? dadosFiltradosPagina : dados;
+
+            if (dataToExport.length === 0) {
+                const customAlert = document.createElement('div');
+                customAlert.textContent = 'Não há dados para exportar.';
+                Object.assign(customAlert.style, {
+                    position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+                    backgroundColor: '#f8d7da', color: '#721c24', padding: '10px 20px',
+                    borderRadius: '5px', border: '1px solid #f5c6cb', zIndex: '1000'
+                });
+                document.body.appendChild(customAlert);
+                setTimeout(() => customAlert.remove(), 3000);
+                return;
+            }
+
+            // Define os cabeçalhos do CSV
+            const headers = ["Data", "Mês", "Semana", "Ano", "Valor", "Forma de Pagamento"];
+            let csvContent = headers.join(";") + "\n"; // Usa ponto e vírgula como separador
+
+            // Adiciona as linhas de dados
+            dataToExport.forEach(item => {
+                const row = [
+                    formatarData(item.data), // Agora formatarData está acessível
+                    item.mes,
+                    item.semana,
+                    item.ano,
+                    item.valor.replace('.', ','), // Garante que o separador decimal seja vírgula para Excel
+                    item.credito
+                ];
+                csvContent += row.join(";") + "\n";
+            });
+
+            // Cria um Blob com o conteúdo CSV
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
+            // Cria um link temporário para download
+            const link = document.createElement('a');
+            if (link.download !== undefined) { // Verifica se o navegador suporta o atributo download
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'dados_financeiros.csv');
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } else {
+                const customAlert = document.createElement('div');
+                customAlert.textContent = 'Seu navegador não suporta a exportação direta de arquivos.';
+                Object.assign(customAlert.style, {
+                    position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+                    backgroundColor: '#f8d7da', color: '#721c24', padding: '10px 20px',
+                    borderRadius: '5px', border: '1px solid #f5c6cb', zIndex: '1000'
+                });
+                document.body.appendChild(customAlert);
+                setTimeout(() => customAlert.remove(), 3000);
+            }
+        }
+    </script>
+</body>
+</html>
